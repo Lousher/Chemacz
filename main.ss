@@ -78,15 +78,74 @@
     (let ([cr-lf "\r\n"])
       (display (string-append line cr-lf)))))
 
+;---------------------------------
+
+(define *BUFFER*)
+(define *EXIT*)
+(define *CHANGES*)
+
+; initially buffer are raw line strings
+(define init-buffer
+  (lambda (file)
+    (call-with-input-file
+      file
+      (lambda (port)
+	(let ([buffer (get-string-all port)])
+	  (set! *BUFFER* (if (eof-object? buffer) "" buffer)))))))
+
+(define @get-change-from-user
+  (lambda ()
+    (let ([ch (read-char)])
+      (case ch
+	([#\x11] (begin (set! *EXIT* #t) #\space))
+	; at first only char as action
+	(else ch)))))
+
+; last element will always be eof-object, why?
+(define @loop-change
+  (lambda ()
+    (let loop ([changes '()])
+      (if *EXIT*
+	changes
+	(loop (append changes (list (@get-change-from-user))))))))
+
+(define save-file
+  (lambda (buffer file)
+    (call-with-output-file
+      file
+      (lambda (port)
+	(put-string port buffer))
+      '(truncate))))
+
+
+(define apply-changes
+  (lambda (buffer changes)
+    (fold-left
+      (lambda (a x) (string-append a (list->string (list x))))
+      *BUFFER*
+      changes)))
+
+(define edit
+  (lambda (file)
+    (init-buffer file)
+    (set! *CHANGES* '())
+    (set! *EXIT* #f)
+
+    (save-file (apply-changes *BUFFER* (@loop-change)) file)))
+    
 
 (define main
   (lambda (file)
+    ; init editor
     (enable-raw-mode)
     (term-clear)
     (term-pin-cursor 1 1)
+    (set! *BUFFER* #f)
 
     (edit file)
 
+    ; deinit editor
+    (set! *BUFFER* #f)
     (term-pin-cursor 1 1)
     (term-clear)
     (disable-raw-mode)
