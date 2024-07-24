@@ -105,6 +105,11 @@
 	(else
 	  (make-change (list->string (list ch))))))))
 
+(define with-display
+  (lambda (change)
+    (display (change-value change))
+    change))
+
 (define file->string
   (lambda (file)
     (call-with-input-file
@@ -113,59 +118,57 @@
 
 (define @loop-change
   (lambda (file)
-      (let loop
-	([preview (display (file->string file))]
-	 [changes '()])
-	(if *EXIT*
-	  changes
-	  (let ([change (@get-change-from-user)])
-	    (loop (display (change-value change))
-		(append
-		  changes
-		  (list change))))))))
+    (let ([preview (file->string file)])
+      (let loop ([changes '()]
+	 (if *EXIT*
+	   changes
+	   (loop (append
+		   changes
+		   (list
+		     (with-display
+		       (@get-change-from-user)))))))))))
+  (define save-file
+    (lambda (buffer file)
+      (call-with-output-file
+	file
+	(lambda (port)
+	  (put-string port buffer))
+	'(truncate))))
 
-(define save-file
-  (lambda (buffer file)
-    (call-with-output-file
-      file
-      (lambda (port)
-	(put-string port buffer))
-      '(truncate))))
+  (define apply-change
+    (lambda (buffer change)
+      (string-append
+	buffer
+	(change-value change))))
 
-(define apply-change
-  (lambda (buffer change)
-    (string-append
-      buffer
-      (change-value change))))
+  (define apply-changes
+    (lambda (buffer changes)
+      (fold-left
+	apply-change
+	buffer
+	changes)))
 
-(define apply-changes
-  (lambda (buffer changes)
-    (fold-left
-      apply-change
-      buffer
-      changes)))
+  (define edit
+    (lambda (file)
+      (set! *EXIT* #f)
 
-(define edit
-  (lambda (file)
-    (set! *EXIT* #f)
+      (save-file
+	(apply-changes
+	  (init-buffer file)
+	  (@loop-change file))
+	file)))
 
-    (save-file
-      (apply-changes
-	(init-buffer file)
-	(@loop-change file))
-      file)))
+  (define main
+    (lambda (file)
+      ; init editor
+      (enable-raw-mode)
+      (term-clear)
+      (term-pin-cursor 1 1)
 
-(define main
-  (lambda (file)
-    ; init editor
-    (enable-raw-mode)
-    (term-clear)
-    (term-pin-cursor 1 1)
+      (edit file)
 
-    (edit file)
-
-    ; deinit editor
-    (term-pin-cursor 1 1)
-    (term-clear)
-    (disable-raw-mode)
-    ((lambda () (display #\newline)))))
+      ; deinit editor
+      (term-pin-cursor 1 1)
+      (term-clear)
+      (disable-raw-mode)
+      ((lambda () (display #\newline)))))
