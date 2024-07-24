@@ -157,6 +157,8 @@
 	 (append
 	   (list (change-value change))
 	   buffer))
+	(["DELETE"] 
+	 (cdr buffer))
 	(["EXIT"] buffer))))  
 
 (define apply-changes
