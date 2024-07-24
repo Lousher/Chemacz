@@ -92,7 +92,7 @@
 	  (if (eof-object? buffer) "" buffer))))))
 
 (define-record-type change
-  (fields value))
+  (fields type value))
 
 (define @get-change-from-user
   (lambda ()
@@ -101,15 +101,22 @@
 	([#\x11]
 	 (begin
 	   (set! *EXIT* #t)
-	   (make-change "")))
+	   (make-change "ADD" "")))
+	([#\delete] (make-change "DELETE" #f))
 	(else
-	  (make-change (list->string (list ch))))))))
+	  (make-change "ADD" (list->string (list ch))))))))
 
 (define file->string
   (lambda (file)
     (call-with-input-file
       file
       get-string-all)))
+
+(define update-preview
+  (lambda (preview change)
+    (case (change-type change)
+      (["ADD"] (display (change-value change)))
+      )))
 
 (define @loop-change
   (lambda (buffer)
@@ -119,7 +126,7 @@
 	(if *EXIT*
 	  (values buffer changes)
 	  (let ([change (@get-change-from-user)])
-	    (loop (display (change-value change))
+	    (loop (update-preview preview change)
 		(append
 		  changes
 		  (list change))))))))
@@ -134,9 +141,11 @@
 
 (define apply-change
   (lambda (buffer change)
-    (string-append
-      buffer
-      (change-value change))))
+    (case (change-type change) 
+      	(["ADD"]
+	 (string-append
+	   buffer
+	   (change-value change))))))
 
 (define apply-changes
   (lambda (buffer changes)
