@@ -128,7 +128,6 @@
 (define edit
   (lambda (file)
     (init-buffer file)
-    (set! *CHANGES* '())
     (set! *EXIT* #f)
 
     (save-file (apply-changes *BUFFER* (@loop-change)) file)))
