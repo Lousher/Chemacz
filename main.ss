@@ -112,12 +112,12 @@
       get-string-all)))
 
 (define @loop-change
-  (lambda (file)
+  (lambda (buffer)
       (let loop
-	([preview (display (file->string file))]
+	([preview (display buffer)]
 	 [changes '()])
 	(if *EXIT*
-	  changes
+	  (values buffer changes)
 	  (let ([change (@get-change-from-user)])
 	    (loop (display (change-value change))
 		(append
@@ -150,9 +150,10 @@
     (set! *EXIT* #f)
 
     (save-file
-      (apply-changes
-	(init-buffer file)
-	(@loop-change file))
+      (call-with-values
+	(lambda ()
+	  (@loop-change (init-buffer file)))
+	apply-changes)
       file)))
 
 (define main
