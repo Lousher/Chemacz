@@ -53,7 +53,7 @@
 
 (define term-delete-n-char-cursor-right
   (lambda (n)
-    (for-each display '(#\esc #\[ n #\P))))
+    (for-each display (list #\esc #\[ n #\P))))
 
 (define CONTROL #\x1f)
 
@@ -82,14 +82,18 @@
 
 (define *EXIT*)
 
-; initially buffer are raw line strings
+; for better manipulation buffer is like a list
+
+
 (define init-buffer
   (lambda (file)
     (call-with-input-file
       file
       (lambda (port)
-	(let ([buffer (get-string-all port)])
-	  (if (eof-object? buffer) "" buffer))))))
+	(let ([content (get-string-all port)])
+	  (if (eof-object? content)
+	    '()
+	    (reverse (string->list content))))))))
 
 (define-record-type change
   (fields type value))
@@ -101,10 +105,10 @@
 	([#\x11]
 	 (begin
 	   (set! *EXIT* #t)
-	   (make-change "ADD" "")))
+	   (make-change "EXIT" #f)))
 	([#\delete] (make-change "DELETE" #f))
 	(else
-	  (make-change "ADD" (list->string (list ch))))))))
+	  (make-change "ADD" ch))))))
 
 (define file->string
   (lambda (file)
@@ -116,40 +120,48 @@
   (lambda (preview change)
     (case (change-type change)
       (["ADD"] (display (change-value change)))
-      )))
+      (["DELETE"]
+       (begin 
+	 (term-cursor-left 1)
+	 (term-delete-n-char-cursor-right 1))))))
 
+; buffer now is list, and it should reverse?
+; because in cons structure, car is new
 (define @loop-change
   (lambda (buffer)
       (let loop
-	([preview (display buffer)]
+	([preview (display (list->string (reverse buffer)))]
 	 [changes '()])
 	(if *EXIT*
 	  (values buffer changes)
 	  (let ([change (@get-change-from-user)])
 	    (loop (update-preview preview change)
 		(append
-		  changes
-		  (list change))))))))
+		  (list change)
+		  changes)))))))
 
+; buffer now is list ch
 (define save-file
   (lambda (buffer file)
     (call-with-output-file
       file
       (lambda (port)
-	(put-string port buffer))
+	(put-string port (list->string (reverse buffer))))
       '(truncate))))
 
+; buffer is list of ch
 (define apply-change
-  (lambda (buffer change)
+  (lambda (change buffer)
     (case (change-type change) 
       	(["ADD"]
-	 (string-append
-	   buffer
-	   (change-value change))))))
+	 (append
+	   (list (change-value change))
+	   buffer))
+	(["EXIT"] buffer))))  
 
 (define apply-changes
   (lambda (buffer changes)
-    (fold-left
+    (fold-right
       apply-change
       buffer
       changes)))
