@@ -98,17 +98,29 @@
 (define-record-type change
   (fields type value))
 
+(define char-visible?
+    (lambda (ch)
+      (let ([code (char->integer ch)])
+        (or (and (>= code #x20) (<= code #x7E))
+            (and (>= code #xA0) (<= code #xFFFD))))))
+
+(define make-control
+  (lambda (ch)
+    (case ch
+	  ([#\x11]
+	   (begin
+	     (set! *EXIT* #t)
+	     (make-change "EXIT" #f)))
+	  ([#\return] (make-change "RETURN" #f))
+	  ([#\delete] (make-change "DELETE" #f)))))
+
 (define @get-change-from-user
   (lambda ()
     (let ([ch (read-char)])
-      (case ch
-	([#\x11]
-	 (begin
-	   (set! *EXIT* #t)
-	   (make-change "EXIT" #f)))
-	([#\delete] (make-change "DELETE" #f))
-	(else
-	  (make-change "ADD" ch))))))
+      (if (char-visible? ch)
+	(make-change "ADD" ch)
+	(make-control ch)
+	))))
 
 (define file->string
   (lambda (file)
@@ -120,24 +132,29 @@
   (lambda (preview change)
     (case (change-type change)
       (["ADD"] (display (change-value change)))
+      (["RETURN"]
+       (begin
+	 (display #\return)
+	 (display #\newline)))
       (["DELETE"]
        (begin 
 	 (term-cursor-left 1)
-	 (term-delete-n-char-cursor-right 1))))))
+	 (term-delete-n-char-cursor-right 1)))
+      )))
 
 ; buffer now is list, and it should reverse?
 ; because in cons structure, car is new
 (define @loop-change
   (lambda (buffer)
-      (let loop
-	([preview (display (list->string (reverse buffer)))]
-	 [changes '()])
-	(if *EXIT*
-	  (values buffer changes)
-	  (let ([change (@get-change-from-user)])
-	    (loop (update-preview preview change)
-		(append
-		  (list change)
+    (let loop
+      ([preview (display (list->string (reverse buffer)))]
+       [changes '()])
+      (if *EXIT*
+	(values buffer changes)
+	(let ([change (@get-change-from-user)])
+	  (loop (update-preview preview change)
+		(cons
+		  change
 		  changes)))))))
 
 ; buffer now is list ch
@@ -149,17 +166,18 @@
 	(put-string port (list->string (reverse buffer))))
       '(truncate))))
 
-; buffer is list of ch
+; buffer is list of ch, reverse order
 (define apply-change
   (lambda (change buffer)
     (case (change-type change) 
-      	(["ADD"]
-	 (append
-	   (list (change-value change))
-	   buffer))
-	(["DELETE"] 
-	 (cdr buffer))
-	(["EXIT"] buffer))))  
+      (["ADD"]
+       (cons
+	 (change-value change)
+	 buffer))
+      (["DELETE"] 
+       (cdr buffer))
+      (["RETURN"] buffer)
+      (["EXIT"] buffer))))
 
 (define apply-changes
   (lambda (buffer changes)
