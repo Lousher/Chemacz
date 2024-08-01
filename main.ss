@@ -1,23 +1,13 @@
 (load-shared-object "raw-mode.so")
 (load "rope.ss")
+(load "term-control.ss")
+(load "changes.ss")
 
 (define enable-raw-mode
   (foreign-procedure "enableRawMode" () void*))
 
 (define disable-raw-mode
   (foreign-procedure "disableRawMode" () void*))
-
-(define (term-clear)
-  (display "\x1B;[2J"))
-
-(define (term-hide-cursor)
-  (display "\x1B;[?25l"))
-
-(define (term-show-cursor)
-  (display "\x1B;[?25h"))
-
-(define (term-pin-cursor x y)
-  (for-each display (list #\esc #\[ x #\; y #\H)))
 
 (define list-index
   (lambda (li i)
@@ -32,61 +22,6 @@
     (let ([index (list-index li i)])
       (cons (list-head li index)
 	    (list-tail li (+ index 1))))))
-
-(define (term-get-cursor)
-  (call-with-port
-    (current-input-port)
-    (lambda (port)
-      (display "\x1B;[6n")
-      (let loop ([ch (read-char port)]
-		 [ch-li '()])
-	(if (char=? ch #\R)
-	  (let ([li (list-split (list-tail ch-li 2) #\;)])
-	    (cons (string->number
-		    (list->string
-		      (car li)))
-		  (string->number
-		    (list->string
-		      (cdr li)))))
-	  (loop (read-char port)
-		(append ch-li (list ch))))))))
-
-(define term-clear-line-cursor-left
-  (lambda ()
-    (for-each display '(#\esc #\[ 1 #\K))))
-
-(define term-clear-line-cursor-right
-  (lambda ()
-    (for-each display '(#\esc #\[ 0 #\K))))
-
-(define term-cursor-up
-  (lambda (n)
-    (for-each display (list #\esc #\[ n #\A))))
-(define term-cursor-down
-  (lambda (n)
-    (for-each display (list #\esc #\[ n #\B))))
-(define term-cursor-right
-  (lambda (n)
-    (for-each display (list #\esc #\[ n #\C))))
-(define term-cursor-left
-  (lambda (n)
-    (for-each display (list #\esc #\[ n #\D))))
-
-(define term-cursor-move
-  (lambda (x y)
-    (let ([x-op (if (positive? x)
-		  term-cursor-right
-		  term-cursor-left)]
-	  [y-op (if (positive? y)
-		  term-cursor-down
-		  term-cursor-up)])
-      (begin
-	(x-op (abs x))
-	(y-op (abs y))))))
-
-(define term-delete-n-char-cursor-right
-  (lambda (n)
-    (for-each display (list #\esc #\[ n #\P))))
 
 (define CONTROL #\x1f)
 
@@ -158,8 +93,6 @@
     (lines->rope-leaves
       (file->lines file))))
 
-(define-record-type change
-  (fields rope type value preview))
 
 (define char-visible?
   (lambda (ch)
@@ -176,30 +109,6 @@
 	  cur
 	  (list-ref buffer (- (car cur) 1)))))))
 
-(define make-control
-  (lambda (ch buffer)
-    (case ch
-      ([#\x11]
-       (begin
-	 (set! *EXIT* #t)
-	 (make-change #f "EXIT" #f (lambda (change) '()))))
-      ([#\return]
-       (make-change #f "RETURN" #f *preview-return))
-      ([#\x5]
-       (make-change
-	 (cdr (cur-rope buffer))
-	 "LINE_END"
-	 #f
-	 (lambda (change) (term-pin-cursor 1 (+ 1 (rope-leaf-weight (cdr (cur-rope buffer))))))))
-      ([#\x1]
-       (make-change
-	 (cdr (cur-rope buffer))
-	 "LINE_START"
-	 #f
-	 (lambda (change)
-	   (term-pin-cursor 1 1))))
-      ([#\delete]
-       (make-change #f "DELETE" #f *preview-delete)))))
 
 (define @get-change-from-user
   (lambda (buffer)
@@ -214,33 +123,6 @@
     (call-with-input-file
       file
       get-string-all)))
-
-(define *preview-add
-  (lambda (change)
-    (display (change-value change))))
-
-(define *preview-return
-  (lambda (change)
-    (begin
-      (display #\return)
-      (display #\newline))))
-
-(define *preview-delete
-  (lambda (change)
-    (begin 
-      (term-cursor-left 1)
-      (term-delete-n-char-cursor-right 1))))
-
-(define *display-lines
-  (lambda (lines)
-    (for-each
-      display-line
-      lines)))
-
-(define *init-preview
-  (lambda (buffer)
-    (*display-lines (rope-leaves->lines buffer))
-    (term-pin-cursor (car *CUR*) (cdr *CUR*))))
 
 (define @loop-change
   (lambda (buffer)
