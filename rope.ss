@@ -8,7 +8,7 @@
     (lambda (new)
       (lambda (str)
 	(let ([length (string-length str)])
-	  (new length (string->immutable-string str))
+	  (new length str)
 	  )))))
 
 (define-record-type rope-internal

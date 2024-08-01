@@ -114,6 +114,7 @@
 ;---------------------------------
 (define *EXIT*)
 (define *LINE_END* #\x5) ; C-E
+(define *LINE_START* #\x1) ; C-A
 
 (define line->rope-leaf
   (lambda (line)
@@ -121,7 +122,9 @@
 
 (define lines->rope-leaves
   (lambda (lines)
-    (map line->rope-leaf lines)))
+    (if (null? lines)
+      (list (make-rope-leaf ""))
+      (map line->rope-leaf lines))))
 
 (define rope-leaves->lines
   (lambda (leaves)
@@ -137,7 +140,7 @@
 	  (if (eof-object? line)
 	    results
 	    (loop
-	      (cons line results)
+	      (append results (list line))
 	      (get-line port))))))))
 
 (define lines->string
@@ -145,7 +148,7 @@
     (fold-right
       (lambda (line result)
 	(string-append
-	  result (string #\newline) line))
+	   line (string #\newline) result))
       ""
       lines)))
 
@@ -167,7 +170,11 @@
 (define cur-rope
   (lambda (buffer)
     (let ([cur (term-get-cursor)])
-      (list-ref buffer (- (car cur) 1)))))
+      (if (> (car cur) (length buffer))
+	(display "OUT")
+	(cons
+	  cur
+	  (list-ref buffer (- (car cur) 1)))))))
 
 (define make-control
   (lambda (ch buffer)
@@ -180,10 +187,17 @@
        (make-change #f "RETURN" #f *preview-return))
       ([#\x5]
        (make-change
-	 (cur-rope buffer)
+	 (cdr (cur-rope buffer))
 	 "LINE_END"
 	 #f
-	 (lambda (change) (term-pin-cursor 1 (rope-leaf-weight (cur-rope buffer))))))
+	 (lambda (change) (term-pin-cursor 1 (+ 1 (rope-leaf-weight (cdr (cur-rope buffer))))))))
+      ([#\x1]
+       (make-change
+	 (cdr (cur-rope buffer))
+	 "LINE_START"
+	 #f
+	 (lambda (change)
+	   (term-pin-cursor 1 1))))
       ([#\delete]
        (make-change #f "DELETE" #f *preview-delete)))))
 
@@ -232,14 +246,12 @@
   (lambda (buffer)
     (let loop
       ([preview (*init-preview buffer)]
-       [changes '()])
+       [buffer-fin buffer])
       (if *EXIT*
-	(values buffer changes)
+	buffer-fin
 	(let ([change (@get-change-from-user buffer)])
 	  (loop ((change-preview change) change)
-		(cons
-		  change
-		  changes)))))))
+		(apply-change change buffer-fin)))))))
 
 (define save-file
   (lambda (buffer file)
@@ -251,39 +263,53 @@
 		      (rope-leaves->lines buffer))))
       '(truncate))))
 
+(define rope-weight-add
+  (lambda (rope x)
+    (let ([weight (rope-leaf-weight rope)])
+      (rope-leaf-weight-set! rope (+ x weight)))))
+
+(define delete-char 
+  (lambda (cur-rope)
+    (let ([cur (car cur-rope)]
+	  [rope (cdr cur-rope)])
+      (let ([length (rope-leaf-weight rope)]
+	    [content (rope-leaf-content rope)])
+	(rope-leaf-content-set!
+	  rope
+	  (string-truncate! content (- length 1))
+	  )
+	(rope-weight-add rope -1)))))
+
 (define apply-change
   (lambda (change buffer)
     (case (change-type change) 
       (["ADD"]
-       (if (null? buffer)
-	 (append buffer (list (make-rope-leaf (string (change-value change)))))
-	 (let* ([rope-line (car buffer)]
-	        [content (rope-leaf-content rope-line)])
-	   (rope-leaf-content-set! rope-line
-				   (string-append content (string (change-value change))))
-	   buffer)))
+       (let* ([rope-line (cdr (cur-rope buffer))]
+	      [content (rope-leaf-content rope-line)])
+	 (rope-leaf-content-set! rope-line
+				 (string-append content (string (change-value change))))
+	 (rope-weight-add rope-line 1)
+	 buffer))
       (["DELETE"] 
-       (cdr buffer))
-      (["RETURN"] buffer)
+       (begin
+	 (delete-char (cur-rope buffer))
+	 buffer))
+      (["RETURN"]
+       (let ([rows (length buffer)]
+	     [cur (car (cur-rope buffer))])
+	 (if (= (car cur) rows)
+             (append buffer (list (make-rope-leaf "")))
+	       buffer)))
       (["LINE_END"] buffer)
       (["EXIT"] buffer))))
-
-(define apply-changes
-  (lambda (buffer changes)
-    (fold-right
-      apply-change
-      buffer
-      changes)))
 
 (define edit
   (lambda (file)
     (set! *EXIT* #f)
 
     (save-file
-      (call-with-values
-	(lambda ()
-	  (@loop-change (init-buffer file)))
-	apply-changes)
+      (@loop-change
+	(init-buffer file))
       file)))
 
 (define main
