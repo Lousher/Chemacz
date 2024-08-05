@@ -26,15 +26,18 @@
 (define add?
   (lambda (action)
     (string=? "ADD" (action-type action))))
+
 ; using call/cc to break, more beautiful
 (define apply-action
   (lambda (buffer action)
-    (cond
-      ([exit? action] (*EXIT*))
-      ([string=? "ESC_SEQ" (action-type action)]
-       (display action))
-      ([add? action] (display action))
-      )))
+    (let ([type (action-type action)]
+	  [value (action-value action)])
+      (cond
+	([exit? action] (*EXIT*))
+	([esc-seq? value]
+	 (term-exec-esc-seq value))
+	([add? action]
+	 (term-display (action-value action)))))))
 
 (define apply-actions
   (lambda (buffer actions)
