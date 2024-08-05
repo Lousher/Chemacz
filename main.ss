@@ -9,7 +9,6 @@
 
 (define disable-raw-mode
   (foreign-procedure "disableRawMode" () void*))
-
 ;---------------------------------
 (define make-buffer
   (lambda (file)
@@ -27,7 +26,7 @@
   (lambda (action)
     (string=? "ADD" (action-type action))))
 
-; using call/cc to break, more beautiful
+; when apply action, both on term and buffer
 (define apply-action
   (lambda (buffer action)
     (let ([type (action-type action)]
@@ -46,15 +45,24 @@
       buffer
       actions)))
 
+(define *display-buffer
+  (lambda (buf)
+    (for-each
+      term-display-line
+      (map rope-leaf-content buf))))
+
 ; esc-seqs is in escape-sequences.ss
 (define edit
   (lambda (file)
     (call/cc 
       (lambda (exit)
 	(set! *EXIT* exit)
-	(let loop ([buffer (make-buffer file)])
-	  (let ([actions (@capture-actions buffer esc-seqs)])
-	    (loop (apply-actions buffer actions))))))))
+	(let ([buffer (make-buffer file)])
+	  (*display-buffer buffer)
+	  (term-pin-cursor 1 1)
+	  (let loop ([buf buffer])
+	    (let ([actions (@capture-actions buf esc-seqs)])
+	      (loop (apply-actions buf actions)))))))))
 
 (define main
   (lambda (file)

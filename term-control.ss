@@ -1,3 +1,6 @@
+(define (term-display-line content)
+  (term-display (string-append content "\r\n")))
+
 (define (term-display item)
   (display item))
 
