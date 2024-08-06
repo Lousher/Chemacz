@@ -26,15 +26,14 @@
   (lambda (action)
     (string=? "ADD" (action-type action))))
 
-; when apply action, both on term and buffer
 (define apply-action
   (lambda (buffer action)
     (let ([type (action-type action)]
 	  [value (action-value action)])
       (cond
 	([exit? action] (*EXIT*))
-	([esc-seq? value]
-	 (term-exec-esc-seq value))
+	([ch-seq? value]
+	 (term-exec-ch-seq value))
 	([add? action]
 	 (term-display (action-value action)))))))
 
@@ -51,7 +50,7 @@
       term-display-line
       (map rope-leaf-content buf))))
 
-; esc-seqs is in escape-sequences.ss
+; ch-seqs is in escape-sequences.ss
 (define edit
   (lambda (file)
     (call/cc 
@@ -61,8 +60,15 @@
 	  (*display-buffer buffer)
 	  (term-pin-cursor 1 1)
 	  (let loop ([buf buffer])
-	    (let ([actions (@capture-actions buf esc-seqs)])
+	    (let ([actions (@capture-actions buf char-sequences)])
 	      (loop (apply-actions buf actions)))))))))
+
+(define char-sequences
+  (call-with-input-file
+    "char-sequences.txt"
+    (lambda (port)
+      (map make-ch-seq 
+	   (get-lines port)))))
 
 (define main
   (lambda (file)

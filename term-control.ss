@@ -4,10 +4,10 @@
 (define (term-display item)
   (display item))
 
-(define (term-exec-esc-seq seq)
+(define (term-exec-ch-seq seq)
   (for-each
     display
-    (esc-seq-chars seq)))
+    (ch-seq-chars seq)))
 
 (define (term-clear)
   (display "\x1B;[2J"))

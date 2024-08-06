@@ -2,7 +2,7 @@
 (load "string-extension.ss")
 
 ; like UP esc [ A
-(define-record-type esc-seq
+(define-record-type ch-seq
   (fields chars type)
   (protocol
     (lambda (new)
@@ -12,29 +12,23 @@
 	    (map string->char (cdr items))
 	    (car items)))))))
 
-(define esc-seqs
-  (call-with-input-file
-    "escape-sequence.txt"
-    (lambda (port)
-      (map make-esc-seq 
-	   (get-lines port)))))
 
 (define list-nth-eq?
   (lambda (list index item)
     (eq? item (list-ref list index))))
 
-(define esc-seq-nth-eq?
+(define ch-seq-nth-eq?
   (lambda (seq index ch)
-    (let ([chars (esc-seq-chars seq)])
+    (let ([chars (ch-seq-chars seq)])
       (if (< index (length chars))
 	(list-nth-eq? chars index ch)
 	#t))))
 
-(define filter-esc-seqs-nth-eq
+(define filter-ch-seqs-nth-eq
   (lambda (seqs index ch)
     (filter
       (lambda (seq)
-	(esc-seq-nth-eq? seq index ch))
+	(ch-seq-nth-eq? seq index ch))
       seqs)))
 
 (define int-range
@@ -43,10 +37,10 @@
       (list to)
       (cons from (int-range (+ from 1) to)))))
 
-(define filter-esc-seqs-chars-eq
+(define filter-ch-seqs-chars-eq
   (lambda (seqs chars)
     (fold-left
-      filter-esc-seqs-nth-eq
+      filter-ch-seqs-nth-eq
       seqs
       (int-range 0 (- (length chars) 1))
       chars)))
@@ -55,16 +49,16 @@
   (lambda (li)
     (= 1 (length li))))
 
-(define consume-esc-seq
+(define consume-ch-seq
   (lambda (chars seqs)
-    (let ([alters (filter-esc-seqs-chars-eq seqs chars)])
+    (let ([alters (filter-ch-seqs-chars-eq seqs chars)])
       (cond
 	[(only? alters)
 	 (values
 	   (car alters)
 	   (list-tail
 	     chars
-	     (length (esc-seq-chars (car alters)))))]
+	     (length (ch-seq-chars (car alters)))))]
 	[(null? alters) (values #f chars)]
 	[else (values alters chars)]))))
 
@@ -73,9 +67,7 @@
     (let ([len (length li)])
       (list-ref li (- len 1)))))
 
-(define esc-seq-begin?
+(define ch-seq-begin?
   (lambda (ch seqs)
-    (let ([begin-chars (map car (map esc-seq-chars seqs))])
+    (let ([begin-chars (map car (map ch-seq-chars seqs))])
       (memq ch begin-chars))))
-
-
