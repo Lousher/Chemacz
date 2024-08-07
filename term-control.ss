@@ -4,7 +4,7 @@
 (define (term-display item)
   (display item))
 
-(define (term-exec-ch-seq seq)
+(define (term-display-seq seq)
   (for-each
     display
     (ch-seq-chars seq)))

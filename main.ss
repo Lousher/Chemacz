@@ -2,7 +2,9 @@
 (load "term-control.ss")
 (load "port-extension.ss")
 (load "rope.ss")
-(load "handle-input.ss")
+(load "input-to-action.ss")
+(load "action-apply.ss")
+(load "action-display.ss")
 
 (define enable-raw-mode
   (foreign-procedure "enableRawMode" () void*))
@@ -26,31 +28,12 @@
   (lambda (action)
     (string=? "ADD" (action-type action))))
 
-(define apply-action
-  (lambda (buffer action)
-    (let ([type (action-type action)]
-	  [value (action-value action)])
-      (cond
-	([exit? action] (*EXIT*))
-	([ch-seq? value]
-	 (term-exec-ch-seq value))
-	([add? action]
-	 (term-display (action-value action)))))))
-
-(define apply-actions
-  (lambda (buffer actions)
-    (fold-left
-      apply-action
-      buffer
-      actions)))
-
 (define *display-buffer
   (lambda (buf)
     (for-each
       term-display-line
       (map rope-leaf-content buf))))
 
-; ch-seqs is in escape-sequences.ss
 (define edit
   (lambda (file)
     (call/cc 
@@ -61,6 +44,7 @@
 	  (term-pin-cursor 1 1)
 	  (let loop ([buf buffer])
 	    (let ([actions (@capture-actions buf char-sequences)])
+	      (*display-actions buf actions)
 	      (loop (apply-actions buf actions)))))))))
 
 (define char-sequences
