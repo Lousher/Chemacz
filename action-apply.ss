@@ -1,3 +1,11 @@
+; pos comes from cursor, range start 0
+(define string-delete!
+  (lambda (str pos)
+    (let ([len (string-length str)])
+      (let ([str1 (substring str 0 (- pos 1))]
+	    [str2 (substring str pos len)])
+	(string-append str1 str2)))))
+
 (define string-insert!
   (lambda (str pos ch)
     (let ([len (string-length str)])
@@ -23,8 +31,32 @@
     (let ([pos (action-position act)]
 	  [val (action-value act)])
       (let ([rope (list-ref buf (car pos))])
-	(insert-rope-char! rope (cdr pos) val)
-	))))
+	(insert-rope-char! rope (cdr pos) val)))))
+(define delete-rope-char!
+  (lambda (rope cur)
+    (let ([str (rope-leaf-content rope)]
+	  [len (rope-leaf-weight rope)])
+      (rope-leaf-content-set! 
+	rope (string-delete! str cur))
+      (rope-leaf-weight-set!
+	rope (- len 1)))))
+
+
+(define delete-buffer-char!
+  (lambda (buf act)
+    (let ([pos (action-position act)])
+      (let ([rope (list-ref buf (car pos))])
+	(delete-rope-char! rope (cdr pos))))))
+
+(define *refresh-delete-line
+  (lambda (buf act)
+    (let* ([pos (action-position act)]
+	   [line (list-ref buf (car pos))])
+      (term-pin-cursor (cons (car pos) 0))
+      (display "\x1B;[2K")
+      (display (rope-leaf-content line))
+      (term-pin-cursor (action-position act))
+      (term-cursor-left 1))))
 
 (define *refresh-line
   (lambda (buffer action)
@@ -45,10 +77,15 @@
 	([string=? "INIT" (action-type action)]
 	 (begin
 	   (*display-buffer (action-value action))
-	   (term-pin-cursor (action-position action))
-	   ))
+	   (term-pin-cursor (action-position action))))
 	([string=? "SAVE" (action-type action)]
 	 (*SAVE* buffer))
+	([string=? "DELETE" (action-type action)]
+	 (begin
+	   (delete-buffer-char! buffer action)
+	   (*refresh-delete-line buffer action))
+	 )
+
 	([exit? action] (*EXIT*))
 	([ch-seq? value]
 	 (begin

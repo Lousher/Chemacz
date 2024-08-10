@@ -26,6 +26,8 @@
       (cond
 	[(char=? ch #\q)
 	 (list (make-action "EXIT" #f #f))]
+	[(char=? ch #\delete)
+	 (list (make-action "DELETE" #f (term-get-cursor)))] 
 	[(char=? ch #\x13)
 	 (list (make-action "SAVE" #f #f))]
 	[(ch-seq-begin? ch seqs)
