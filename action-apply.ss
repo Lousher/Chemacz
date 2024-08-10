@@ -1,30 +1,5 @@
-; pos comes from cursor, range start 0
-(define string-delete!
-  (lambda (str pos)
-    (let ([len (string-length str)])
-      (let ([str1 (substring str 0 (- pos 1))]
-	    [str2 (substring str pos len)])
-	(string-append str1 str2)))))
-
-(define string-insert!
-  (lambda (str pos ch)
-    (let ([len (string-length str)])
-      (if (eq? pos len)
-	(string-append str (string ch))
-	(let ([str1 (substring str 0 pos)]
-	      [str2 (substring str pos len)])
-	  (string-append str1 (string ch) str2)
-	  )))))
-
-(define insert-rope-char!
-  (lambda (rope cur ch)
-    (let ([str (rope-leaf-content rope)]
-	  [len (rope-leaf-weight rope)])
-      (rope-leaf-content-set!
-	rope (string-insert! str cur ch))
-      (rope-leaf-weight-set! 
-	rope (+ len 1))
-      )))
+(load "string-extension.ss")
+(load "rope.ss")
 
 (define insert-buffer-char!
   (lambda (buf act)
@@ -32,15 +7,6 @@
 	  [val (action-value act)])
       (let ([rope (list-ref buf (car pos))])
 	(insert-rope-char! rope (cdr pos) val)))))
-(define delete-rope-char!
-  (lambda (rope cur)
-    (let ([str (rope-leaf-content rope)]
-	  [len (rope-leaf-weight rope)])
-      (rope-leaf-content-set! 
-	rope (string-delete! str cur))
-      (rope-leaf-weight-set!
-	rope (- len 1)))))
-
 
 (define delete-buffer-char!
   (lambda (buf act)
@@ -68,7 +34,6 @@
       (term-pin-cursor (action-position action))
       (term-cursor-right 1))))
 
-; action need do buffer manipulations
 (define apply-action
   (lambda (buffer action)
     (let ([type (action-type action)]
@@ -90,13 +55,11 @@
 	([ch-seq? value]
 	 (begin
 	   (term-display-seq 
-	     (action-value action)))
-	 )
+	     (action-value action))))
 	([add? action]
 	 (begin
 	   (insert-buffer-char! buffer action)
-	   (*refresh-line buffer action)
-	   ))))))
+	   (*refresh-line buffer action)))))))
 
 (define apply-actions
   (lambda (buffer actions)

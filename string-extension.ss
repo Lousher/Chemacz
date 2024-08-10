@@ -1,3 +1,18 @@
+(define string-delete!
+  (lambda (str pos)
+    (let ([len (string-length str)])
+      (let ([str1 (substring str 0 (- pos 1))]
+	    [str2 (substring str pos len)])
+	(string-append str1 str2)))))
+
+(define string-insert!
+  (lambda (str pos ch)
+    (let ([len (string-length str)])
+      (let ([str1 (substring str 0 pos)]
+	    [str2 (substring str pos len)])
+	(string-append str1 (string ch) str2)
+	))))
+
 (define string->char
     (lambda (str)
       (if (> (string-length str) 1)

@@ -4,7 +4,6 @@
 (load "rope.ss")
 (load "input-to-action.ss")
 (load "action-apply.ss")
-(load "action-display.ss")
 
 (define enable-raw-mode
   (foreign-procedure "enableRawMode" () void*))
@@ -57,7 +56,6 @@
   (lambda (buf)
     (make-action "INIT" buf '(0 . 0))))
 
-;actions will do impact on buffer
 (define edit
   (lambda (file)
     (call/cc 
@@ -67,7 +65,8 @@
 	(let ([buffer (make-buffer file)])
 	  (let loop ([acts (list (*init-display buffer))])
 	    (apply-actions buffer acts)
-	    (loop (@capture-actions char-sequences))))))))
+	    (loop
+	      (@capture-actions char-sequences))))))))
 
 (define char-sequences
   (call-with-input-file
