@@ -1,7 +1,8 @@
 (load "char-sequence.ss")
+(load "term-control.ss")
 
 (define-record-type action
-  (fields type value))
+  (fields type value position))
 
 (define @capture-ch-seq
   (lambda (ch seqs)
@@ -24,12 +25,14 @@
     (let ([ch (read-char)])
       (cond
 	[(char=? ch #\q)
-	 (list (make-action "EXIT" #f))]
+	 (list (make-action "EXIT" #f #f))]
+	[(char=? ch #\x13)
+	 (list (make-action "SAVE" #f #f))]
 	[(ch-seq-begin? ch seqs)
 	 (let ([result (@capture-ch-seq ch seqs)])
 	   (if (ch-seq? result)
-	     (list (make-action "CH_SEQ" result))
+	     (list (make-action "CH_SEQ" result #f))
 	     (map
-	       (lambda (ch) (make-action "ADD" ch))
+	       (lambda (ch) (make-action "ADD" ch (term-get-cursor)))
 	       result)))]
-	[else (list (make-action "ADD" ch))]))))
+	[else (list (make-action "ADD" ch (term-get-cursor)))]))))

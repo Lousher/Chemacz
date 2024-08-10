@@ -7,8 +7,8 @@
 	([ch-seq? value]
 	 (term-display-seq value))
 	([add? action]
-	 (term-display
-	   (action-value action)))))))     
+	 (term-display (action-value action)
+))))))     
 
 (define *display-actions
   (lambda (buf actions)

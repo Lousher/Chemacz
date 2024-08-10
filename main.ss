@@ -34,18 +34,40 @@
       term-display-line
       (map rope-leaf-content buf))))
 
+(define buffer->string
+  (lambda (buf)
+    (fold-right
+      (lambda (line res)
+	(string-append line "\r\n" res))
+      ""
+      (map rope-leaf-content buf))))
+
+(define save-buf-to-file
+  (lambda (file)
+    (lambda (buf)
+      (call-with-output-file
+	file
+	(lambda (port)
+	  (put-string
+	    port
+	    (buffer->string buf)))
+	'(truncate)))))
+
+; *display must be after apply
 (define edit
   (lambda (file)
     (call/cc 
       (lambda (exit)
 	(set! *EXIT* exit)
+	(set! *SAVE* (save-buf-to-file file))
+
 	(let ([buffer (make-buffer file)])
 	  (*display-buffer buffer)
-	  (term-pin-cursor 1 1)
+	  (term-pin-cursor 0 0)
 	  (let loop ([buf buffer])
 	    (let ([actions (@capture-actions buf char-sequences)])
-	      (*display-actions buf actions)
-	      (loop (apply-actions buf actions)))))))))
+	      (loop
+		(apply-actions buf actions)))))))))
 
 (define char-sequences
   (call-with-input-file
@@ -59,12 +81,12 @@
     ; init editor
     (enable-raw-mode)
     (term-clear)
-    (term-pin-cursor 1 1)
+    (term-pin-cursor 0 0)
 
     (edit file)
 
     ; deinit editor
-    (term-pin-cursor 1 1)
+    (term-pin-cursor 0 0)
     (term-clear)
     (disable-raw-mode)
-    ((lambda () (display "DONE")))))
+    ))

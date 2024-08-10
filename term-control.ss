@@ -1,3 +1,5 @@
+(load "list-extension.ss")
+
 (define (term-display-line content)
   (term-display (string-append content "\r\n")))
 
@@ -19,7 +21,11 @@
   (display "\x1B;[?25h"))
 
 (define (term-pin-cursor x y)
-  (for-each display (list #\esc #\[ x #\; y #\H)))
+  (for-each display (list #\esc #\[ (+ x 1) #\; (+ y 1) #\H)))
+
+(define dec
+  (lambda (nu)
+    (- nu 1)))
 
 (define (term-get-cursor)
   (call-with-port
@@ -29,13 +35,13 @@
       (let loop ([ch (read-char port)]
 		 [ch-li '()])
 	(if (char=? ch #\R)
-	  (let ([li (list-split (list-tail ch-li 2     ) #\;)])
-	    (cons (string->number
+	  (let ([li (list-split (list-tail ch-li 2) #\;)])
+	    (cons (dec (string->number
 		    (list->string
-		      (car li)))
-		  (string->number
+		      (car li))))
+		  (dec (string->number
 		    (list->string
-		      (cdr li)))))
+		      (cdr li))))))
 	  (loop (read-char port)
 		(append ch-li (list ch))))))))
 
@@ -46,6 +52,9 @@
 (define term-clear-line-cursor-right
   (lambda ()
     (for-each display '(#\esc #\[ 0 #\K))))
+
+(define (term-clear-line)
+  (display "\x1B;[2K"))
 
 (define term-cursor-up
   (lambda (n)
