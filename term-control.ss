@@ -20,8 +20,8 @@
 (define (term-show-cursor)
   (display "\x1B;[?25h"))
 
-(define (term-pin-cursor x y)
-  (for-each display (list #\esc #\[ (+ x 1) #\; (+ y 1) #\H)))
+(define (term-pin-cursor pos)
+  (for-each display (list #\esc #\[ (+ (car pos) 1) #\; (+ (cdr pos) 1) #\H)))
 
 (define dec
   (lambda (nu)

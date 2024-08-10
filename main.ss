@@ -53,21 +53,21 @@
 	    (buffer->string buf)))
 	'(truncate)))))
 
-; *display must be after apply
+(define *init-display
+  (lambda (buf)
+    (make-action "INIT" buf '(0 . 0))))
+
+;actions will do impact on buffer
 (define edit
   (lambda (file)
     (call/cc 
       (lambda (exit)
 	(set! *EXIT* exit)
 	(set! *SAVE* (save-buf-to-file file))
-
 	(let ([buffer (make-buffer file)])
-	  (*display-buffer buffer)
-	  (term-pin-cursor 0 0)
-	  (let loop ([buf buffer])
-	    (let ([actions (@capture-actions buf char-sequences)])
-	      (loop
-		(apply-actions buf actions)))))))))
+	  (let loop ([acts (list (*init-display buffer))])
+	    (apply-actions buffer acts)
+	    (loop (@capture-actions char-sequences))))))))
 
 (define char-sequences
   (call-with-input-file
@@ -81,12 +81,12 @@
     ; init editor
     (enable-raw-mode)
     (term-clear)
-    (term-pin-cursor 0 0)
+    (term-pin-cursor '(0 . 0))
 
     (edit file)
 
     ; deinit editor
-    (term-pin-cursor 0 0)
+    (term-pin-cursor '(0 . 0))
     (term-clear)
     (disable-raw-mode)
     ))

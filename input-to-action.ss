@@ -21,7 +21,7 @@
       (list obj))))
 
 (define @capture-actions
-  (lambda (buffer seqs)
+  (lambda (seqs)
     (let ([ch (read-char)])
       (cond
 	[(char=? ch #\q)
