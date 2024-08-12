@@ -6,7 +6,7 @@
 	(no-right-in-line-end buf act))
       acts)))
 
-; boundary
+; boundary for movement
 (define no-right-in-line-end
   (lambda (buf act)
     (let ([pos (action-position act)])
@@ -15,7 +15,6 @@
 	       (+ (cdr pos) 1))
 	     (string=? "RIGHT" 
 		       (ch-seq-type (action-value act))))
-	  (begin (display (rope-leaf-weight line))
-	  (make-action "CONSTRAINT" #f #f))
+	  (make-action "CONSTRAINT" #f #f)
 	  act)))))
 
