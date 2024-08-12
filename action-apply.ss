@@ -52,6 +52,9 @@
 	 )
 
 	([exit? action] (*EXIT*))
+	([string=? "CONSTRAINT"
+		   (action-type action)]
+	 buffer)
 	([ch-seq? value]
 	 (begin
 	   (term-display-seq 

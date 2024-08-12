@@ -4,6 +4,7 @@
 (load "rope.ss")
 (load "input-to-action.ss")
 (load "action-apply.ss")
+(load "constraints.ss")
 
 (define enable-raw-mode
   (foreign-procedure "enableRawMode" () void*))
@@ -66,7 +67,9 @@
 	  (let loop ([acts (list (*init-display buffer))])
 	    (apply-actions buffer acts)
 	    (loop
-	      (@capture-actions char-sequences))))))))
+	      (constrain
+		buffer
+		(@capture-actions char-sequences)))))))))
 
 (define char-sequences
   (call-with-input-file
