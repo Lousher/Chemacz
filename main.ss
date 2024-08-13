@@ -90,5 +90,4 @@
     ; deinit editor
     (term-pin-cursor '(0 . 0))
     (term-clear)
-    (disable-raw-mode)
-    ))
+    (disable-raw-mode)))

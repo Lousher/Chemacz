@@ -39,6 +39,9 @@
     (let ([type (action-type action)]
 	  [value (action-value action)])
       (cond
+	([string=? "NEWLINE" (action-type action)]
+	 (begin 
+	   (display "\x1B;E")))
 	([string=? "INIT" (action-type action)]
 	 (begin
 	   (*display-buffer (action-value action))
@@ -50,7 +53,6 @@
 	   (delete-buffer-char! buffer action)
 	   (*refresh-delete-line buffer action))
 	 )
-
 	([exit? action] (*EXIT*))
 	([string=? "CONSTRAINT"
 		   (action-type action)]

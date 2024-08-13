@@ -1,20 +1,33 @@
 (load "action.ss")
+
 (define constrain
   (lambda (buf acts)
-    (map 
+    (map
       (lambda (act)
-	(no-right-in-line-end buf act))
+	(constraints buf act))
       acts)))
 
-; boundary for movement
-(define no-right-in-line-end
+; conditions
+(define constraints
   (lambda (buf act)
-    (let ([pos (action-position act)])
-      (let ([line (list-ref buf (car pos))])
-	(if (and (= (rope-leaf-weight line)
-	       (+ (cdr pos) 1))
-	     (string=? "RIGHT" 
-		       (ch-seq-type (action-value act))))
-	  (make-action "CONSTRAINT" #f #f)
-	  act)))))
+    (cond
+      [(move-down-at-last-line? buf act)
+       (make-action "CONSTRAINT" #f #f)]
+      [(move-right-at-last-char? buf act)
+       (make-action "CONSTRAINT" #f #f)]
+      [else act])))
 
+(define move-down-at-last-line?
+  (lambda (buf act)
+    (and (ch-seq? (action-value act))
+	 (let ([pos (action-position act)])
+	   (and (= (+ (car pos) 1) (length buf))
+		(string=? "DOWN" (ch-seq-type (action-value act))))))))
+
+(define move-right-at-last-char?
+  (lambda (buf act)
+    (and (ch-seq? (action-value act))
+	 (let* ([pos (action-position act)]
+		[line (list-ref buf (car pos))])
+	   (and (= (+ (cdr pos) 1) (rope-leaf-weight line))
+		(string=? "RIGHT" (ch-seq-type (action-value act))))))))

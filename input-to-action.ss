@@ -2,7 +2,6 @@
 (load "term-control.ss")
 (load "action.ss")
 
-
 (define @capture-ch-seq
   (lambda (ch seqs)
     (let loop ([chars (list ch)])
@@ -23,6 +22,8 @@
   (lambda (seqs)
     (let ([ch (read-char)])
       (cond
+	[(char=? ch #\return)
+	 (list (make-action "NEWLINE" #f (term-get-cursor)))]
 	[(char=? ch #\x11)
 	 (list (make-action "EXIT" #f #f))]
 	[(char=? ch #\delete)
