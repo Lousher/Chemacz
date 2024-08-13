@@ -26,6 +26,7 @@
       (lambda (msg . args)
 	(cond
 	  [(eqv? msg 'all) buf]
+	  [(eqv? msg 'len) (length buf)]
 	  [(eqv? msg 'ref) (list-ref buf (car args))]
 	  [(eqv? msg 'insert) (list-insert buf (car args) (new-rope))]))))) 
 
@@ -41,7 +42,7 @@
   (lambda (buf)
     (for-each
       term-display-line
-      (map rope-leaf-content buf))))
+      (map rope-leaf-content (buf 'all)))))
 
 (define buffer->string
   (lambda (buf)
@@ -73,11 +74,11 @@
 	(set! *EXIT* exit)
 	(set! *SAVE* (save-buf-to-file file))
 	(let ([buffer (make-buffer file)])
-	  (let loop ([acts (list (*init-display (buffer 'all)))])
-	    (apply-actions (buffer 'all) acts)
+	  (let loop ([acts (list (*init-display buffer))])
+	    (apply-actions buffer acts)
 	    (loop
 	      (constrain
-		(buffer 'all)
+		buffer
 		(@capture-actions char-sequences)))))))))
 
 (define char-sequences

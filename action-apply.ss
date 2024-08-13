@@ -5,19 +5,19 @@
   (lambda (buf act)
     (let ([pos (action-position act)]
 	  [val (action-value act)])
-      (let ([rope (list-ref buf (car pos))])
+      (let ([rope (buf 'ref (car pos))])
 	(insert-rope-char! rope (cdr pos) val)))))
 
 (define delete-buffer-char!
   (lambda (buf act)
     (let ([pos (action-position act)])
-      (let ([rope (list-ref buf (car pos))])
+      (let ([rope (buf 'ref (car pos))])
 	(delete-rope-char! rope (cdr pos))))))
 
 (define *refresh-delete-line
   (lambda (buf act)
     (let* ([pos (action-position act)]
-	   [line (list-ref buf (car pos))])
+	   [line (buf 'ref (car pos))])
       (term-pin-cursor (cons (car pos) 0))
       (display "\x1B;[2K")
       (display (rope-leaf-content line))
@@ -27,7 +27,7 @@
 (define *refresh-line
   (lambda (buffer action)
     (let* ([pos (action-position action)]
-	   [line (list-ref buffer (car pos))])
+	   [line (buffer 'ref (car pos))])
       (term-pin-cursor (cons (car pos) 0))
       (display "\x1B;[2K")
       (display (rope-leaf-content line))
@@ -47,7 +47,7 @@
 	   (*display-buffer (action-value action))
 	   (term-pin-cursor (action-position action))))
 	([string=? "SAVE" (action-type action)]
-	 (*SAVE* buffer))
+	 (*SAVE* (buffer 'all)))
 	([string=? "DELETE" (action-type action)]
 	 (begin
 	   (delete-buffer-char! buffer action)

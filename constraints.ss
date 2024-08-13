@@ -21,13 +21,13 @@
   (lambda (buf act)
     (and (ch-seq? (action-value act))
 	 (let ([pos (action-position act)])
-	   (and (= (+ (car pos) 1) (length buf))
+	   (and (= (+ (car pos) 1) (buf 'len))
 		(string=? "DOWN" (ch-seq-type (action-value act))))))))
 
 (define move-right-at-last-char?
   (lambda (buf act)
     (and (ch-seq? (action-value act))
 	 (let* ([pos (action-position act)]
-		[line (list-ref buf (car pos))])
+		[line (buf 'ref (car pos))])
 	   (and (= (+ (cdr pos) 1) (rope-leaf-weight line))
 		(string=? "RIGHT" (ch-seq-type (action-value act))))))))
