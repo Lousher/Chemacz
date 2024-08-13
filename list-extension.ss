@@ -7,3 +7,9 @@
             (loop
               (append li1 (list (car li2)))
               (cdr li2))))))
+
+(define list-insert
+    (lambda (li n item)
+      (let ([head (list-head li n)]
+            [tail (list-tail li n)])
+        (append head (list item) tail))))

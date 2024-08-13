@@ -5,6 +5,7 @@
 (load "input-to-action.ss")
 (load "action-apply.ss")
 (load "constraints.ss")
+(load "list-extension.ss")
 
 (define enable-raw-mode
   (foreign-procedure "enableRawMode" () void*))
@@ -12,13 +13,21 @@
 (define disable-raw-mode
   (foreign-procedure "disableRawMode" () void*))
 ;---------------------------------
+(define new-rope
+  (lambda ()
+    (make-rope-leaf "")))
 (define make-buffer
   (lambda (file)
-    (call-with-input-file
-      file
-      (lambda (port)
-	(map make-rope-leaf
-	     (get-lines port))))))
+    (let ([buf (call-with-input-file
+		 file
+		 (lambda (port)
+		   (map make-rope-leaf
+			(get-lines port))))])
+      (lambda (msg . args)
+	(cond
+	  [(eqv? msg 'all) buf]
+	  [(eqv? msg 'ref) (list-ref buf (car args))]
+	  [(eqv? msg 'insert) (list-insert buf (car args) (new-rope))]))))) 
 
 (define exit?
   (lambda (action)
@@ -38,7 +47,7 @@
   (lambda (buf)
     (fold-right
       (lambda (line res)
-	(string-append line "\r\n" res))
+	(string-append line "\n" res))
       ""
       (map rope-leaf-content buf))))
 
@@ -64,11 +73,11 @@
 	(set! *EXIT* exit)
 	(set! *SAVE* (save-buf-to-file file))
 	(let ([buffer (make-buffer file)])
-	  (let loop ([acts (list (*init-display buffer))])
-	    (apply-actions buffer acts)
+	  (let loop ([acts (list (*init-display (buffer 'all)))])
+	    (apply-actions (buffer 'all) acts)
 	    (loop
 	      (constrain
-		buffer
+		(buffer 'all)
 		(@capture-actions char-sequences)))))))))
 
 (define char-sequences
